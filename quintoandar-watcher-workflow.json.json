@@ -1,0 +1,212 @@
+{
+  "name": "Quintoandar copy",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        640
+      ],
+      "id": "693a1928-9a3f-479d-8fb3-edba7e0db533",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $json[\"data\"];\nconst results = [];\n\nconst cards = html.match(/<div class=\"Cozy__CardContent-Container[\\s\\S]*?<\\/div>\\s*<\\/div>/g) || [];\n\nfor (const card of cards) {\n  const título = (card.match(/<h2[^>]*>(.*?)<\\/h2>/) || [])[1]?.replace(/<[^>]*>/g, '').trim() || '';\n  const enderecoMatch = card.match(/class=\"[^\"]*Ci-jp3[^\"]*\"[^>]*>([^<]*São Paulo[^<]*)<\\/h2>/i);\n  const endereço = enderecoMatch ? enderecoMatch[1].trim() : '';\n\n  const aluguelMatch = card.match(/R\\$\\s?[\\d\\.\\s]+(?:,\\d{2})?/);\n  const aluguel = aluguelMatch ? aluguelMatch[0].trim() : '';\n\n  const detalhesRaw = (card.match(/\\d+\\s?m²(?:\\s*·\\s*\\d+\\s+quartos?)?(?:\\s*·\\s*\\d+\\s+vagas?)?/i) || [])[0] || '';\n  const tamanho = (detalhesRaw.match(/(\\d+)\\s?m²/) || [])[1] || '';\n  const quartos = (detalhesRaw.match(/(\\d+)\\s+quartos?/) || [])[1] || '';\n  const vagas = (detalhesRaw.match(/(\\d+)\\s+vagas?/) || [])[1] || '';\n\n  const linkMatch = card.match(/<a[^>]+href=\"(\\/alugar\\/imovel\\/[^\"]+?)\"[^>]*>/);\n  const link = linkMatch ? `https://www.quintoandar.com.br${linkMatch[1]}` : '';\n\n  // Filtra imóveis sem endereço e sem detalhes\n  if (!endereço && !detalhesRaw) continue;\n\n  results.push({\n    json: {\n      título,\n      endereço,\n      aluguel,\n      tamanho,\n      quartos,\n      vagas,\n      link\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        640
+      ],
+      "id": "d0d9462f-7631-4eab-8ed1-7e53b936c7ab",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const emojiList = ['🏡', '🏙️', '🏢', '🛋️', '🏠'];\nconst bedEmojis = ['🛏️', '🛌'];\nconst pinEmojis = ['📍', '📌'];\nconst sizeEmojis = ['📐', '📏'];\nconst sparkleEmojis = ['✨', '🌟'];\n\nconst items = $input.all();\n\n// Filtra apenas os que possuem 'quartos'\nconst validItems = items.filter(({ json }) => json.quartos);\n\n// Limita os destaques a 5\nconst topItems = validItems.slice(0, 5);\n\nconst now = new Date();\nconst brDate = now.toLocaleString(\"pt-BR\", {\n  timeZone: \"America/Sao_Paulo\",\n  hour12: false\n});\n\nlet message = `📢 *Achei ${items.length} novos apartamentos!* \\n📅 Atualizado em: ${brDate}\\n\\n🔍 Veja os *${topItems.length} destaques*:\\n`;\n\ntopItems.forEach(({ json }, index) => {\n  const titleEmoji = emojiList[index % emojiList.length];\n  const bed = bedEmojis[index % bedEmojis.length];\n  const pin = pinEmojis[index % pinEmojis.length];\n  const size = sizeEmojis[index % sizeEmojis.length];\n  const sparkle = sparkleEmojis[index % sparkleEmojis.length];\n\n  const isTitleDuplicate = json.título?.trim() === json.endereço?.trim();\n  let bloco = `\\n${titleEmoji} *${json.título || json.endereço || 'Apartamento'}*`;\n\n  if (!isTitleDuplicate && json.endereço) bloco += `\\n${pin} ${json.endereço}`;\n  if (json.tamanho) bloco += `\\n${size} Tamanho: ${json.tamanho} m²`;\n  if (json.quartos) bloco += `\\n${sparkle} ${bed} Quartos: ${json.quartos}`;\n  if (json.vagas) bloco += `\\n🚗 Vagas: ${json.vagas}`;\n\n  bloco += `\\n────────────`;\n  message += bloco + '\\n';\n});\n\nmessage += `\\n👉 [Acesse o site do QuintoAndar](https://www.quintoandar.com.br) para mais opções!\\n\\n_Mensagem automática via n8n_`;\n\nreturn [{ json: { text: message.trim() } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        640
+      ],
+      "id": "9c529722-e1d3-43ff-bbb5-a3ce4fc2da1c",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        640
+      ],
+      "id": "4d7c4c26-6669-432f-b06b-7e6b227c1ffe",
+      "name": "Telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 🌐 Buscar HTML QuintoAndar\t",
+        "height": 400,
+        "width": 260
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -60,
+        520
+      ],
+      "typeVersion": 1,
+      "id": "a9fdbde3-6ee3-4a8f-b399-b60681439230",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "https://www.quintoandar.com.br/alugar/imovel/santa-cecilia-sao-paulo-sp-brasil/apartamento/2-quartos?referrer=profilingv2&flexible=true",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        640
+      ],
+      "id": "881b75ed-82b5-4bef-a68f-6899c8d46036",
+      "name": "Buscar HTML"
+    },
+    {
+      "parameters": {
+        "content": "### 🧹 Extrair dados dos imóveis\t\t",
+        "height": 400,
+        "width": 260,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        200,
+        520
+      ],
+      "typeVersion": 1,
+      "id": "cd6e9cc2-f2c0-427b-939d-b30dd658a287",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "### 🎨 Formatar destaques\t\t",
+        "height": 400,
+        "width": 260,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        460,
+        520
+      ],
+      "typeVersion": 1,
+      "id": "99920ef8-fcfe-4b01-b230-6ce71f754c55",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "### 📲 Enviar para Telegram\t\t",
+        "height": 400,
+        "width": 260,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        720,
+        520
+      ],
+      "typeVersion": 1,
+      "id": "d2f512d5-c812-4aea-8f1d-21254e497194",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## 📡 Alerta Imóveis QuintoAndar\t\n",
+        "height": 520,
+        "width": 1320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -300,
+        440
+      ],
+      "typeVersion": 1,
+      "id": "c2aa6809-0d75-4fde-8142-9451a2acd09d",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Buscar HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar HTML": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ae60a4ef-556d-4eb1-bb47-6c44ec3cfcbd",
+  "meta": {
+    "instanceId": "3de5634d7fec62b689d16c6d810107f8ca4043fbaeca287590a3a8ec24f088bf"
+  },
+  "id": "jOE7hLNFt0lGbud4",
+  "tags": []
+}
