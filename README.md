@@ -2,7 +2,7 @@
 
 Receba automaticamente os melhores apartamentos do QuintoAndar direto no seu Telegram com um fluxo simples e eficiente usando **RSS.app**, **n8n**, e **JavaScript**.
 
-![Preview](assets/preview.png)
+![Preview](preview.png)
 
 ---
 
